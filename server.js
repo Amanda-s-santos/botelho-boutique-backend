@@ -9,17 +9,19 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
+const fs = require("fs");
+
 const db = mysql.createConnection({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+
   ssl: {
-    minVersion: "TLSv1.2",
-    rejectUnauthorized: false,
+    ca: fs.readFileSync("./ca.pem"),
+    rejectUnauthorized: true,
   },
-  connectTimeout: 10000,
 });
 
 db.connect((err) => {
