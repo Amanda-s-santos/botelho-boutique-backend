@@ -16,8 +16,10 @@ const db = mysql.createConnection({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   ssl: {
+    minVersion: "TLSv1.2",
     rejectUnauthorized: false,
   },
+  connectTimeout: 10000,
 });
 
 db.connect((err) => {
@@ -97,15 +99,8 @@ app.get("/produtos", (req, res) => {
 });
 
 app.post("/produtos", (req, res) => {
-  const {
-    nome,
-    descricao,
-    preco,
-    imagem,
-    tamanhos,
-    cores,
-    estoque_variacoes,
-  } = req.body;
+  const { nome, descricao, preco, imagem, tamanhos, cores, estoque_variacoes } =
+    req.body;
 
   db.query(
     `INSERT INTO produtos 
@@ -125,21 +120,14 @@ app.post("/produtos", (req, res) => {
         cores,
         estoque_variacoes,
       });
-    }
+    },
   );
 });
 
 app.put("/produtos/:id", (req, res) => {
   const { id } = req.params;
-  const {
-    nome,
-    descricao,
-    preco,
-    imagem,
-    tamanhos,
-    cores,
-    estoque_variacoes,
-  } = req.body;
+  const { nome, descricao, preco, imagem, tamanhos, cores, estoque_variacoes } =
+    req.body;
 
   db.query(
     `UPDATE produtos 
@@ -149,7 +137,7 @@ app.put("/produtos/:id", (req, res) => {
     (err) => {
       if (err) return res.status(500).json(err);
       res.json({ message: "Produto atualizado com sucesso!" });
-    }
+    },
   );
 });
 
@@ -193,34 +181,35 @@ app.post("/pedidos", (req, res) => {
 
         for (const item of itens) {
           const produtoBanco = produtosBanco.find(
-            (produto) => Number(produto.id) === Number(item.id)
+            (produto) => Number(produto.id) === Number(item.id),
           );
 
           if (!produtoBanco) {
             return db.rollback(() =>
               res.status(404).json({
                 message: `Produto ${item.nome} não encontrado.`,
-              })
+              }),
             );
           }
 
           if (item.tamanho && item.cor) {
-            const estoque = lerEstoqueVariacoes(
-              produtoBanco.estoque_variacoes
-            );
+            const estoque = lerEstoqueVariacoes(produtoBanco.estoque_variacoes);
 
             const variacao = estoque.find(
               (variacao) =>
                 normalizarTexto(variacao.tamanho) ===
                   normalizarTexto(item.tamanho) &&
-                normalizarTexto(variacao.cor) === normalizarTexto(item.cor)
+                normalizarTexto(variacao.cor) === normalizarTexto(item.cor),
             );
 
-            if (!variacao || Number(variacao.quantidade) < Number(item.quantidade)) {
+            if (
+              !variacao ||
+              Number(variacao.quantidade) < Number(item.quantidade)
+            ) {
               return db.rollback(() =>
                 res.status(400).json({
                   message: `Estoque insuficiente para ${item.nome} - ${item.tamanho} / ${item.cor}.`,
-                })
+                }),
               );
             }
 
@@ -239,7 +228,7 @@ app.post("/pedidos", (req, res) => {
               (err) => {
                 if (err) reject(err);
                 else resolve();
-              }
+              },
             );
           });
         });
@@ -298,15 +287,15 @@ app.post("/pedidos", (req, res) => {
                         pedidoId,
                       });
                     });
-                  }
+                  },
                 );
-              }
+              },
             );
           })
           .catch((error) => {
             db.rollback(() => res.status(500).json(error));
           });
-      }
+      },
     );
   });
 });
@@ -336,7 +325,7 @@ app.get("/acompanhar-pedido", (req, res) => {
       }
 
       res.json(result[0]);
-    }
+    },
   );
 });
 
@@ -349,7 +338,7 @@ app.get("/pedidos/:id/itens", (req, res) => {
     (err, result) => {
       if (err) return res.status(500).json(err);
       res.json(result);
-    }
+    },
   );
 });
 
@@ -363,7 +352,7 @@ app.put("/pedidos/:id/status", (req, res) => {
     (err) => {
       if (err) return res.status(500).json(err);
       res.json({ message: "Status atualizado com sucesso!" });
-    }
+    },
   );
 });
 
